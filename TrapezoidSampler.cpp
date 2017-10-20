@@ -1,5 +1,6 @@
 #include "TrapezoidSampler.h"
 #include "Logging.h"
+#include "HardwareConfig.h"
 
 TrapezoidSampler* TrapezoidSampler::Instance = 0;
 
@@ -40,7 +41,7 @@ void TrapezoidSampler::SetSize(short rows, short cols)
 	// I want the leds sorted from last led in strand to first led. 
 	//  in my case, the start led in this list is 32 (that's bottom middle on the frame at the back of my tv)
 	int i = 0;
-	int startLed = 32; /*hardcoded because i'm lazy*/
+	int startLed = START_LED; /*hardcoded because i'm lazy*/
 	int direction = -1;
 
 	// Top row

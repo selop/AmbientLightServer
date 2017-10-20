@@ -22,11 +22,15 @@ public:
 		: m_capture(0), m_frame(0)
 	{
 		m_capture = cvCaptureFromCAM(CV_CAP_ANY);
-		cvSetCaptureProperty(m_capture, CV_CAP_PROP_FPS, CAM_CAPTURE_FPS);
-
 		cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_WIDTH, CAM_CAPTURE_SIZE_WIDTH);
 		cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_HEIGHT, CAM_CAPTURE_SIZE_HEIGHT);
 
+		cvSetCaptureProperty(m_capture, int(5), CAM_CAPTURE_FPS);
+
+		cout << "Exposure : " << cvGetCaptureProperty(m_capture, CV_CAP_PROP_EXPOSURE) << endl;
+		cout << "HardwareConfig FPS: " << CAM_CAPTURE_FPS << endl;
+		cout << "Frames per second using video.get(CV_CAP_PROP_FPS) : " << cvGetCaptureProperty(m_capture, int(5)) << endl;
+		
 		Instance = this;
 	}
 
@@ -39,6 +43,8 @@ public:
 	{
 		if (m_capture == 0)
 			return;
+
+		
 
 		m_frame = cvQueryFrame(m_capture);
 		if (!m_frame)

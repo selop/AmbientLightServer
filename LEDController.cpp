@@ -9,10 +9,12 @@ LEDController* LEDController::Instance = 0;
 // wiringPi only compiles on the RASPBERRY_PI
 #ifdef RASPBERRY_PI
 #include <wiringPi.h>
+#include <wiringPiSPI.h>
 #endif
 
 LEDController::LEDController() : m_isSetup(true), m_prevColorBuffer(0)
 {
+	// TODO: remove this log, APA102 depends on SPI and has fixed pins
 	LOG_INFO("LEDController: setting up with ClockPin1=" << GPIO_CLOCK_PIN1 << " DataPin1=" << GPIO_DATA_PIN1
 					<< " ClockPin2=" << GPIO_CLOCK_PIN2 << " DataPin2=" << GPIO_DATA_PIN2);
 
@@ -24,18 +26,19 @@ LEDController::LEDController() : m_isSetup(true), m_prevColorBuffer(0)
 		m_prevColorBuffer[i] = Color(0, 0, 0);
 
 	#ifdef RASPBERRY_PI
-	if (wiringPiSetup() < 0)
+	wiringPiSetup();
+	if (wiringPiSPISetup(0, 6000000) < 0)
 	{
 		LOG_ERROR("LEDController: Failed to setup wiringPi");
 		m_isSetup = false;
 		return;
 	}
 
-	pinMode(GPIO_CLOCK_PIN1, OUTPUT);
-	pinMode(GPIO_CLOCK_PIN2, OUTPUT);
+	//pinMode(GPIO_CLOCK_PIN1, OUTPUT);
+	//pinMode(GPIO_CLOCK_PIN2, OUTPUT);
 
-	pinMode(GPIO_DATA_PIN1, OUTPUT);
-	pinMode(GPIO_DATA_PIN2, OUTPUT);
+	//pinMode(GPIO_DATA_PIN1, OUTPUT);
+	//pinMode(GPIO_DATA_PIN2, OUTPUT);
 	#endif
 }
 
@@ -59,19 +62,39 @@ void LEDController::UpdateLeds(Color* colorBuffer, float deltaTime, float fadeTi
 		fadeTimeMS = deltaTimeMS;
 	float lerpTerm = deltaTimeMS/fadeTimeMS;
 
-	// Update first strand of 25
-	for (int i=0; i<NUM_LEDS_PER_STRAND; ++i)
+	// Send opening bits for APA102
+	uint8_t buf[1];
+	for(int i = 0; i < 4; i++) {
+		buf[0] = 0x00;
+		wiringPiSPIDataRW(0, buf, 1);
+	}
+
+	uint8_t led_frame[4];
+	// Update all LEDs
+	for (int i=0; i<TOTAL_NUM_LEDS; i++)
 	{
 		Color color = lerpColor(m_prevColorBuffer[i], colorBuffer[i], lerpTerm);
-
-		ShiftOut8Bits(GPIO_CLOCK_PIN1, GPIO_DATA_PIN1, color.ByteR());
-		ShiftOut8Bits(GPIO_CLOCK_PIN1, GPIO_DATA_PIN1, color.ByteG());
-		ShiftOut8Bits(GPIO_CLOCK_PIN1, GPIO_DATA_PIN1, color.ByteB());
+		
+		led_frame[0] = 0b11100000 | (0b00011111 & 15);
+		led_frame[1] = color.ByteB();
+		led_frame[2] = color.ByteG();
+		led_frame[3] = color.ByteR();
+		wiringPiSPIDataRW(0, led_frame, 4);
+		
+		//ShiftOut8Bits(GPIO_CLOCK_PIN1, GPIO_DATA_PIN1, color.ByteR());
+		//ShiftOut8Bits(GPIO_CLOCK_PIN1, GPIO_DATA_PIN1, color.ByteG());
+		//ShiftOut8Bits(GPIO_CLOCK_PIN1, GPIO_DATA_PIN1, color.ByteB());
 
 		m_prevColorBuffer[i] = color;
 	}
 
-	// Update second strand of 25
+	// Send closing bits for APA102
+	for(int i = 0; i < 4; i++) {
+		buf[0] = 0xFF;
+		wiringPiSPIDataRW(0, buf, 1);
+	}
+
+	/* Update second strand of 25
 	for (int i=NUM_LEDS_PER_STRAND; i<TOTAL_NUM_LEDS; ++i)
 	{
 		Color color = lerpColor(m_prevColorBuffer[i], colorBuffer[i], lerpTerm);
@@ -88,6 +111,7 @@ void LEDController::UpdateLeds(Color* colorBuffer, float deltaTime, float fadeTi
 	digitalWrite(GPIO_CLOCK_PIN2, 0);
 	delay(1);
 	#endif
+	*/
 }
 
 void LEDController::UpdateLedsFixed(Color fixedColor, float deltaTime)

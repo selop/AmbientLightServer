@@ -25,6 +25,7 @@ public:
 		cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_WIDTH, CAM_CAPTURE_SIZE_WIDTH);
 		cvSetCaptureProperty(m_capture, CV_CAP_PROP_FRAME_HEIGHT, CAM_CAPTURE_SIZE_HEIGHT);
 
+		// setting CV_CAP_PROP_FPS won't work, using the corresponding int works though
 		cvSetCaptureProperty(m_capture, int(5), CAM_CAPTURE_FPS);
 
 		cout << "Exposure : " << cvGetCaptureProperty(m_capture, CV_CAP_PROP_EXPOSURE) << endl;
